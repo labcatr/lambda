@@ -1,0 +1,168 @@
+---
+
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="generator" content={Astro.generator} />
+        <title>ACS Citation Generator</title>
+    </head>
+    <body>
+        <main>
+            <div class="mx-auto w-11/12 rounded-lg bg-slate-100 my-10 py-8 px-8">
+                <div class="w-full mb-4">
+                    <h1 class="text-2xl font-bold">ACS Citation Generator</h1>
+                    <p class="text-lg">
+                        This is a citation generator for the <a
+                            class="font-semibold text-secondary underline"
+                            href="https://pubs.acs.org/doi/full/10.1021/acsguide.40303"
+                            >American Chemical Society</a
+                        > style.
+                    </p>
+                </div>
+                <!-- Input for a DOI and a div where its outputs will be generated -->
+                <div class="flex flex-row items-center pb-4">
+                    <h2 class="mr-4 font-bold">Input DOI</h2>
+                    <input
+                        id="doi-input"
+                        type="text"
+                        class="mr-4 input input-bordered input-neutral max-w-s rounded-lg bg-slate-100"
+                        placeholder="DOI"
+                    />
+                    <button id="generate" class="btn btn-neutral mr-4">Generate</button>
+                    <div id="status" class="text-red-400 font-bold"></div>
+                </div>
+                <div id="output" class="mx-auto w-full rounded-lg bg-slate-200 h-32 p-4">
+                </div>
+                <div class="mt-4">
+                    <button id="copy-text" type="button" class="btn btn-neutral mr-4"
+                        >Copy to Clipboard</button
+                    >
+                    <button id="copy-mark" type="button" class="btn btn-primary mr-4"
+                        >Copy as Markdown</button
+                    >
+                    <button id="copy-html" type="button" class="btn btn-secondary"
+                        >Copy as HTML</button
+                    >
+                </div>
+            </div>
+        </main>
+
+        <h2 class="mx-auto w-fit">Created by <b>Trevor Fox</b> on October 14th, 2023.</h2>
+    </body>
+    <script>
+        // TODO: Add a localStorage cache for the last 10 citations. Maybe use Nanostores to make it easier to use a map?
+
+        import TurndownService from 'turndown';
+        const turndownService = new TurndownService({
+            headingStyle: 'atx',
+            codeBlockStyle: 'fenced',
+            emDelimiter: '*',
+            bulletListMarker: '-',
+            fence: '```',
+            strongDelimiter: '**',
+            linkStyle: 'inlined',
+            linkReferenceStyle: 'full',
+        });
+        const statusDiv = document.getElementById('status') as HTMLDivElement;
+
+        document.getElementById('copy-text')?.addEventListener('click', () => {
+            const output = document.getElementById('output')?.innerText;
+            copyToClipboard(output ?? '', 'text');
+        });
+
+        document.getElementById('copy-mark')?.addEventListener('click', () => {
+            const output = turndownService.turndown(
+                document.getElementById('output') as TurndownService.Node,
+            );
+            copyToClipboard(output ?? '', 'markdown');
+        });
+
+        document.getElementById('copy-html')?.addEventListener('click', () => {
+            const output = document.getElementById('output')?.innerHTML;
+            copyToClipboard(output ?? '', 'html');
+        });
+
+        function copyToClipboard(text: string, format: string) {
+            // Copy the content of the output div to the clipboard
+            navigator.clipboard.writeText(text).then(
+                function () {
+                    console.log(
+                        'Copying to clipboard was successful! Formatted as: ' + format,
+                    );
+                },
+                function (err) {
+                    console.error('Async: Could not copy text: ', err);
+                },
+            );
+        }
+
+        function htmlToElement(html: string): HTMLElement {
+            var template = document.createElement('template');
+            html = html.trim(); // Never return a text node of whitespace as the result
+            template.innerHTML = html;
+            return (
+                (template.content.children.item(0) as HTMLElement) || new HTMLElement()
+            );
+        }
+
+        document.getElementById('generate')?.addEventListener('click', async () => {
+            const inputValue = (document?.getElementById('doi-input') as HTMLInputElement)
+                ?.value;
+            const currentDoi =
+                inputValue.length >= 1 ? inputValue.split(',') : ['No Doi Entered'];
+            for (const doi of currentDoi) {
+                console.log(doi);
+                const url = `https://api.crossref.org/works/${doi}`;
+                let data = await fetch(url);
+                console.log(url);
+
+                statusDiv.innerHTML = `<span class="text-green-400">Fetching from ${currentDoi}</span>.`;
+
+                if (!data.ok) {
+                    statusDiv.textContent =
+                        'Error fetching data from Crossref. Did you enter a valid DOI?';
+                } else {
+                    const jsonData = (await data.json()) as any;
+                    const authors = jsonData.message.author
+                        .map((author: { family: string; given: string }) => {
+                            return `${author.family}, ${author.given
+                                .split(' ')
+                                .map(name => name[0])
+                                .join('. ')}.`.trim();
+                        })
+                        .join('; ');
+
+                    const title = jsonData.message.title[0].replace(/\n/g, '');
+
+                    const journalAbbr =
+                        jsonData.message['short-container-title'][0] ??
+                        jsonData.message['container-title'][0] ??
+                        jsonData.message['publisher'];
+                    const year = jsonData.message['published']['date-parts'][0][0];
+
+                    const volume = jsonData.message.volume;
+                    const pages = jsonData.message.page;
+                    const url = jsonData.message.URL.replace('dx.doi.org', 'doi.org');
+
+                    const htmlCitation = `
+					<div class="article-citation-inner">
+						${authors} ${title}. <i>${journalAbbr ?? ''}</i> <b>${year}</b>${
+                            volume ? ', <i>' + volume + '</i>, ' : ''
+                        }${pages}. ${url}.
+					</div>`
+                        .toString()
+                        .replace('undefined', '');
+
+                    document
+                        .getElementById('output')!
+                        .append(htmlToElement(htmlCitation));
+                    statusDiv.innerHTML = `<span class="text-blue-400">Done.</span>`;
+                }
+            }
+        });
+    </script>
+</html>
