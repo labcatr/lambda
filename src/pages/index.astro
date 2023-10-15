@@ -165,6 +165,8 @@
                     document
                         .getElementById('output')!
                         .append(htmlToElement(htmlCitation));
+
+                    (document.getElementById('doi-input') as HTMLInputElement).value = '';
                     statusDiv.innerHTML = `<span class="text-blue-400">Done.</span>`;
                 }
             }
