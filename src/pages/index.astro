@@ -115,10 +115,15 @@
             const currentDoi =
                 inputValue.length >= 1 ? inputValue.split(',') : ['No Doi Entered'];
             for (const doi of currentDoi) {
-                console.log(doi);
-                const url = `https://api.crossref.org/works/${doi}`;
+                const url = `https://api.crossref.org/works/${doi.replace(
+                    'https://doi.org/',
+                    '',
+                )}`;
+
                 let data = await fetch(url);
-                console.log(url);
+                console.log(
+                    'Fetching from:' + url + '. Click this to view the JSON response.',
+                );
 
                 statusDiv.innerHTML = `<span class="text-green-400">Fetching from ${currentDoi}</span>.`;
 
