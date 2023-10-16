@@ -8,11 +8,11 @@
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="viewport" content="width=device-width" />
         <meta name="generator" content={Astro.generator} />
-        <title>ACS Citation Generator</title>
+        <title>ACS Citation Generator | Labcatr</title>
     </head>
     <body>
         <main>
-            <div class="mx-auto w-11/12 rounded-lg bg-slate-100 my-10 py-8 px-8">
+            <div class="mx-auto w-11/12 rounded-lg bg-neutral my-10 py-8 px-8">
                 <div class="w-full mb-4">
                     <h1 class="text-2xl font-bold">ACS Citation Generator</h1>
                     <p class="text-lg">
@@ -24,28 +24,42 @@
                     </p>
                 </div>
                 <!-- Input for a DOI and a div where its outputs will be generated -->
-                <div class="flex flex-row items-center pb-4">
-                    <h2 class="mr-4 font-bold">Input DOI</h2>
-                    <input
-                        id="doi-input"
-                        type="text"
-                        class="mr-4 input input-bordered input-neutral w-1/4 rounded-lg bg-slate-100"
-                        placeholder="DOI"
-                    />
-                    <button id="generate" class="btn btn-neutral mr-4">Generate</button>
-                    <div id="status" class="text-red-400 font-bold"></div>
+                <div class="flex flex-row items-end pb-4">
+                    <div class="form-control w-1/4 mr-4">
+                        <label for="doi-input" class="label"
+                            ><span class="label-text">DOI</span></label
+                        >
+                        <input
+                            id="doi-input"
+                            type="text"
+                            class="input input-neutral rounded-lg bg-base-200"
+                            placeholder="10.1000/182"
+                        />
+                    </div>
+                    <div class="flex items-center">
+                        <button id="generate" class="btn btn-base-100 mr-4"
+                            >Generate</button
+                        >
+                        <div id="status" class="text-error font-bold"></div>
+                    </div>
                 </div>
-                <div id="output" class="mx-auto w-full rounded-lg bg-slate-200 h-32 p-4">
+                <div
+                    id="output"
+                    class="mx-auto w-full rounded-lg bg-base-200 min-h-[6rem] p-4"
+                >
                 </div>
                 <div class="mt-4">
-                    <button id="copy-text" type="button" class="btn btn-neutral mr-4"
+                    <button id="copy-text" type="button" class="btn btn-success mr-4"
                         >Copy to Clipboard</button
                     >
                     <button id="copy-mark" type="button" class="btn btn-primary mr-4"
                         >Copy as Markdown</button
                     >
-                    <button id="copy-html" type="button" class="btn btn-secondary"
+                    <button id="copy-html" type="button" class="btn btn-secondary mr-4"
                         >Copy as HTML</button
+                    >
+                    <button id="delete-data" type="button" class="btn btn-warning"
+                        >Delete All Data</button
                     >
                 </div>
             </div>
@@ -53,52 +67,22 @@
 
         <h2 class="mx-auto w-fit">Created by <b>Trevor Fox</b> on October 14th, 2023.</h2>
     </body>
+
     <script>
-        // TODO: Add a localStorage cache for the last 10 citations. Maybe use Nanostores to make it easier to use a map?
+        import { $citationsMap } from '../atoms/citationsMap.ts';
 
-        import TurndownService from 'turndown';
-        const turndownService = new TurndownService({
-            headingStyle: 'atx',
-            codeBlockStyle: 'fenced',
-            emDelimiter: '*',
-            bulletListMarker: '-',
-            fence: '```',
-            strongDelimiter: '**',
-            linkStyle: 'inlined',
-            linkReferenceStyle: 'full',
+        document.addEventListener('DOMContentLoaded', () => {
+            const citationsMap = $citationsMap.get();
+            if (citationsMap.length > 0) {
+                document.getElementById('output')!.append(...citationsMap);
+            }
         });
+    </script>
+
+    <script>
+        import { $citationsMap } from '../atoms/citationsMap.ts';
+
         const statusDiv = document.getElementById('status') as HTMLDivElement;
-
-        document.getElementById('copy-text')?.addEventListener('click', () => {
-            const output = document.getElementById('output')?.innerText;
-            copyToClipboard(output ?? '', 'text');
-        });
-
-        document.getElementById('copy-mark')?.addEventListener('click', () => {
-            const output = turndownService.turndown(
-                document.getElementById('output') as TurndownService.Node,
-            );
-            copyToClipboard(output ?? '', 'markdown');
-        });
-
-        document.getElementById('copy-html')?.addEventListener('click', () => {
-            const output = document.getElementById('output')?.innerHTML;
-            copyToClipboard(output ?? '', 'html');
-        });
-
-        function copyToClipboard(text: string, format: string) {
-            // Copy the content of the output div to the clipboard
-            navigator.clipboard.writeText(text).then(
-                function () {
-                    console.log(
-                        'Copying to clipboard was successful! Formatted as: ' + format,
-                    );
-                },
-                function (err) {
-                    console.error('Async: Could not copy text: ', err);
-                },
-            );
-        }
 
         function htmlToElement(html: string): HTMLElement {
             var template = document.createElement('template');
@@ -109,23 +93,36 @@
             );
         }
 
+        function normalizeDoi(doi: string): string {
+            let out = doi.trim();
+            // Remove the https://doi.org/ prefix if it exists
+            out = out.replace('https://doi.org/', '');
+            // Remove a leading slash if it exists
+            out = out[0] == '/' ? out.replace('/', '') : out;
+
+            return out;
+        }
+
         document.getElementById('generate')?.addEventListener('click', async () => {
             const inputValue = (document?.getElementById('doi-input') as HTMLInputElement)
                 ?.value;
             const currentDoi =
                 inputValue.length >= 1 ? inputValue.split(',') : ['No Doi Entered'];
+
+            if (currentDoi[0] == 'No Doi Entered') {
+                statusDiv.innerHTML = `No DOI entered.`;
+                return;
+            }
+
             for (const doi of currentDoi) {
-                const url = `https://api.crossref.org/works/${doi.replace(
-                    'https://doi.org/',
-                    '',
-                )}`;
+                const normalizedDoi: string = normalizeDoi(doi);
+                const url = `https://api.crossref.org/works/${normalizedDoi}`;
+                statusDiv.innerHTML = `<span class="text-success">Fetching citation for ${currentDoi}</span>.`;
 
                 let data = await fetch(url);
                 console.log(
-                    'Fetching from:' + url + '. Click this to view the JSON response.',
+                    'Fetching from: ' + url + '. Click this to view the JSON response.',
                 );
-
-                statusDiv.innerHTML = `<span class="text-green-400">Fetching from ${currentDoi}</span>.`;
 
                 if (!data.ok) {
                     statusDiv.textContent =
@@ -162,14 +159,73 @@
                         .toString()
                         .replace('undefined', '');
 
-                    document
-                        .getElementById('output')!
-                        .append(htmlToElement(htmlCitation));
+                    const citationElement = htmlToElement(htmlCitation);
+
+                    document.getElementById('output')!.append(citationElement);
+                    console.log($citationsMap.get());
+                    console.log(citationElement.outerHTML);
+                    $citationsMap.set([...$citationsMap.get(), citationElement]);
+                    console.log($citationsMap.get());
 
                     (document.getElementById('doi-input') as HTMLInputElement).value = '';
                     statusDiv.innerHTML = `<span class="text-blue-400">Done.</span>`;
                 }
             }
+        });
+    </script>
+
+    <script>
+        import TurndownService from 'turndown';
+        const turndownService = new TurndownService({
+            headingStyle: 'atx',
+            codeBlockStyle: 'fenced',
+            emDelimiter: '*',
+            bulletListMarker: '-',
+            fence: '```',
+            strongDelimiter: '**',
+            linkStyle: 'inlined',
+            linkReferenceStyle: 'full',
+        });
+
+        document.getElementById('copy-text')?.addEventListener('click', () => {
+            const output = document.getElementById('output')?.innerText;
+            copyToClipboard(output ?? '', 'text');
+        });
+
+        document.getElementById('copy-mark')?.addEventListener('click', () => {
+            const output = turndownService.turndown(
+                document.getElementById('output') as TurndownService.Node,
+            );
+            copyToClipboard(output ?? '', 'markdown');
+        });
+
+        document.getElementById('copy-html')?.addEventListener('click', () => {
+            const output = document.getElementById('output')?.innerHTML;
+            copyToClipboard(output ?? '', 'html');
+        });
+
+        function copyToClipboard(text: string, format: string) {
+            // Copy the content of the output div to the clipboard
+            navigator.clipboard.writeText(text).then(
+                function () {
+                    console.log(
+                        'Copying to clipboard was successful! Formatted as: ' + format,
+                    );
+                },
+                function (err) {
+                    console.error('Async: Could not copy text: ', err);
+                },
+            );
+        }
+    </script>
+
+    <script>
+        import { $citationsMap } from '../atoms/citationsMap.ts';
+        document.getElementById('delete-data')?.addEventListener('click', () => {
+            console.log($citationsMap.get());
+            $citationsMap.set([]);
+            console.log($citationsMap.get());
+            document.getElementById('output')!.innerHTML = '';
         });
     </script>
 </html>
