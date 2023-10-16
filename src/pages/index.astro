@@ -162,10 +162,7 @@
                     const citationElement = htmlToElement(htmlCitation);
 
                     document.getElementById('output')!.append(citationElement);
-                    console.log($citationsMap.get());
-                    console.log(citationElement.outerHTML);
                     $citationsMap.set([...$citationsMap.get(), citationElement]);
-                    console.log($citationsMap.get());
 
                     (document.getElementById('doi-input') as HTMLInputElement).value = '';
                     statusDiv.innerHTML = `<span class="text-blue-400">Done.</span>`;
