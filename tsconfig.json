@@ -1,7 +1,7 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "baseUrl": "./src",
+    "baseUrl": "D:/Coding/citation-astro/src",
     "plugins": [
       {
         "name": "@astrojs/ts-plugin"
@@ -10,5 +10,7 @@
     "types": [
       "astro/env"
     ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   }
 }
