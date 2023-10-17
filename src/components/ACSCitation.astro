@@ -1,0 +1,118 @@
+---
+// TODO: CONVERT THIS COMPONENT TO A TSX COMPONENT SO I CAN USE IT IN CitationField.tsx ON PAGE LOAD
+
+export interface Props {
+    'citation-id': string;
+    authors: string;
+    title: string;
+    journalAbbr?: string;
+    year: string;
+    volume?: string;
+    pages: string;
+    url: string;
+}
+
+const {
+    authors,
+    title,
+    journalAbbr,
+    year,
+    volume,
+    pages,
+    url,
+    'citation-id': citationId,
+} = Astro.props;
+
+const html = `${authors}
+        ${title}. <i>${journalAbbr ?? ''}</i> 
+        <b>${year}</b>
+        ${pages}. <a href=${url}>${url}</a>.`;
+---
+
+<div id={citationId} class="article-citation flex flex-row items-center content-center">
+    <div class="article-citation-inner" set:html={html} />
+    <div class="flex flex-row items-center justify-center ml-4">
+        <button
+            data-for={citationId}
+            data-method="text"
+            class="copy-button rounded-md h-6 bg-success hover:opacity-80 flex items-center justify-center content-center aspect-square mr-1"
+        >
+            <i class="ri-file-copy-2-line h-6 aspect-square block text-secondary-content"
+            ></i>
+        </button>
+        <button
+            data-for={citationId}
+            data-method="markdown"
+            class="copy-button rounded-md h-6 bg-primary hover:bg-primary-focus flex items-center justify-center content-center aspect-square mr-1"
+        >
+            <i class="ri-markdown-line h-6 aspect-square block text-secondary-content"
+            ></i>
+        </button>
+        <button
+            data-for={citationId}
+            data-method="html"
+            class="copy-button rounded-md h-6 bg-secondary hover:bg-secondary-focus flex items-center justify-center content-center aspect-square mr-1"
+        >
+            <i class="ri-code-s-slash-line h-6 aspect-square block text-secondary-content"
+            ></i>
+        </button>
+        <button
+            class="delete-button rounded-md h-6 bg-warning hover:bg-error flex items-center justify-center content-center aspect-square"
+            data-for={citationId}
+        >
+            <i class="ri-close-circle-line text-warning-content h-6 aspect-square block"
+            ></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    import TurndownService from 'turndown';
+    const turndownService = new TurndownService({
+        headingStyle: 'atx',
+        codeBlockStyle: 'fenced',
+        emDelimiter: '*',
+        bulletListMarker: '-',
+        fence: '```',
+        strongDelimiter: '**',
+        linkStyle: 'inlined',
+        linkReferenceStyle: 'full',
+    });
+
+    document.querySelectorAll('.copy-button').forEach(el => {
+        el.addEventListener('click', () => {
+            const data = (el as HTMLElement).dataset;
+            copyCitation(data.for as string, data.method as FormatStyle);
+        });
+    });
+
+    type FormatStyle = 'text' | 'html' | 'markdown';
+
+    function copyCitation(id: string, format: FormatStyle) {
+        const citation = document.querySelector(
+            `#${id} .article-citation-inner`,
+        ) as HTMLElement;
+
+        let textToCopy: string = '';
+        switch (format) {
+            case 'text':
+                textToCopy = citation.innerText;
+                break;
+            case 'html':
+                textToCopy = citation.innerHTML.replaceAll(/>\s*</g, '');
+                break;
+            case 'markdown':
+                textToCopy = turndownService.turndown(citation as TurndownService.Node);
+                break;
+        }
+
+        navigator.clipboard.writeText(textToCopy).then(
+            function () {
+                console.log(`Copying ${id} to clipboard was successful!`);
+            },
+            function (err) {
+                console.error('Async: Could not copy text: ', err);
+            },
+        );
+    }
+</script>

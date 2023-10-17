@@ -1,5 +1,5 @@
 ---
-
+import ACSCitation from 'components/ACSCitation.astro';
 ---
 
 <html lang="en">
@@ -9,6 +9,9 @@
         <meta name="viewport" content="width=device-width" />
         <meta name="generator" content={Astro.generator} />
         <title>ACS Citation Generator | Labcatr</title>
+        <script>
+            import 'remixicon/fonts/remixicon.css';
+        </script>
     </head>
     <body>
         <main>
@@ -47,6 +50,16 @@
                     id="output"
                     class="mx-auto w-full rounded-lg bg-base-200 min-h-[6rem] p-4"
                 >
+                    <ACSCitation
+                        citation-id="test"
+                        authors="test"
+                        journalAbbr="test"
+                        title="test"
+                        year="2002"
+                        volume="test"
+                        pages="test"
+                        url="test"
+                    />
                 </div>
                 <div class="mt-4">
                     <button id="copy-text" type="button" class="btn btn-success mr-4"
@@ -96,7 +109,6 @@
 
     <script>
         import { $citationsMap } from '../atoms/citationsMap.ts';
-
         const statusDiv = document.getElementById('status') as HTMLDivElement;
 
         function htmlToElement(html: string): HTMLElement {
