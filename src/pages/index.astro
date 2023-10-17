@@ -70,11 +70,23 @@
 
     <script>
         import { $citationsMap } from '../atoms/citationsMap.ts';
+        import sanitizeHtml from 'sanitize-html';
 
         document.addEventListener('DOMContentLoaded', () => {
             const citationsMap = $citationsMap.get();
+            const citationsMapClean: HTMLElement[] = citationsMap.map(
+                (citation: HTMLElement) => {
+                    const div = document.createElement('div');
+                    const sanitized = sanitizeHtml(citation.outerHTML);
+                    console.log(sanitized);
+                    div.innerHTML = sanitized;
+                    return div.firstChild as HTMLElement;
+                },
+            );
+            console.log(citationsMap);
+            console.log(citationsMapClean);
             if (citationsMap.length > 0) {
-                document.getElementById('output')!.append(...citationsMap);
+                document.getElementById('output')!.append(...citationsMapClean);
             }
         });
     </script>
