@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { $citationsMap } from 'atoms/citationsMap';
+import { $citationsMap } from '../../atoms/citationsMap';
 
 
 
