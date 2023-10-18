@@ -8,6 +8,6 @@ import react from "@astrojs/react";
 export default defineConfig({
   integrations: [tailwind(), react()],
   // This is here if I ever want this to be server-side rendered
-  output: "server",
-  adapter: vercel()
+  // output: "server",
+  // adapter: vercel()
 });
