@@ -1,5 +1,5 @@
 ---
-import ACSCitation from '../components/ACSCitation.astro';
+import CitationField from 'components/React/CitationField';
 ---
 
 <html lang="en">
@@ -8,7 +8,16 @@ import ACSCitation from '../components/ACSCitation.astro';
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="viewport" content="width=device-width" />
         <meta name="generator" content={Astro.generator} />
-        <title>ACS Citation Generator | Labcatr</title>
+        <meta
+            name="description"
+            content="A citation generator for the American Chemical Society style. Created by Trevor Fox"
+        />
+        <meta
+            name="keywords"
+            content="acs, american chemical society, chemistry, reference, citation, generator, automatic, engine"
+        />
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+        <title>Labcatr-λ | ACS Generator</title>
         <script>
             import 'remixicon/fonts/remixicon.css';
         </script>
@@ -17,7 +26,9 @@ import ACSCitation from '../components/ACSCitation.astro';
         <main>
             <div class="mx-auto w-11/12 rounded-lg bg-neutral my-10 py-8 px-8">
                 <div class="w-full mb-4">
-                    <h1 class="text-2xl font-bold">ACS Citation Generator</h1>
+                    <h1 class="text-2xl font-bold">
+                        Labcatr-λ, an ACS Citation Generator
+                    </h1>
                     <p class="text-lg">
                         This is a citation generator for the <a
                             class="font-semibold text-secondary underline"
@@ -48,9 +59,9 @@ import ACSCitation from '../components/ACSCitation.astro';
                 </div>
                 <div
                     id="output"
-                    class="mx-auto w-full rounded-lg bg-base-200 min-h-[6rem] p-4"
+                    class="mx-auto w-full rounded-lg bg-base-200 min-h-[6rem] p-4 mt-4"
                 >
-                    <ACSCitation
+                    <!-- <ACSCitation
                         citation-id="test"
                         authors="test"
                         journalAbbr="test"
@@ -59,7 +70,8 @@ import ACSCitation from '../components/ACSCitation.astro';
                         volume="test"
                         pages="test"
                         url="test"
-                    />
+                    /> -->
+                    <CitationField client:only="react" />
                 </div>
                 <div class="mt-4">
                     <button id="copy-text" type="button" class="btn btn-success mr-4"
@@ -67,9 +79,6 @@ import ACSCitation from '../components/ACSCitation.astro';
                     >
                     <button id="copy-mark" type="button" class="btn btn-primary mr-4"
                         >Copy as Markdown</button
-                    >
-                    <button id="copy-html" type="button" class="btn btn-secondary mr-4"
-                        >Copy as HTML</button
                     >
                     <button id="delete-data" type="button" class="btn btn-warning"
                         >Delete All Data</button
@@ -80,32 +89,9 @@ import ACSCitation from '../components/ACSCitation.astro';
 
         <h2 class="mx-auto w-fit">Created by <b>Trevor Fox</b> on October 14th, 2023.</h2>
         <h2 class="mx-auto w-fit text-sm">
-            <a href="https://github.com/VoxelMC/citation-astro/wiki/CHANGELOG">v1.0.1</a>
+            <a href="https://github.com/VoxelMC/citation-astro/wiki/CHANGELOG">v1.1.0</a>
         </h2>
     </body>
-
-    <script>
-        import { $citationsMap } from '../atoms/citationsMap.ts';
-        import sanitizeHtml from 'sanitize-html';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const citationsMap = $citationsMap.get();
-            const citationsMapClean: HTMLElement[] = citationsMap.map(
-                (citation: HTMLElement) => {
-                    const div = document.createElement('div');
-                    const sanitized = sanitizeHtml(citation.outerHTML);
-                    console.log(sanitized);
-                    div.innerHTML = sanitized;
-                    return div.firstChild as HTMLElement;
-                },
-            );
-            console.log(citationsMap);
-            console.log(citationsMapClean);
-            if (citationsMap.length > 0) {
-                document.getElementById('output')!.append(...citationsMapClean);
-            }
-        });
-    </script>
 
     <script>
         import { $citationsMap } from '../atoms/citationsMap.ts';
@@ -147,7 +133,7 @@ import ACSCitation from '../components/ACSCitation.astro';
                 statusDiv.innerHTML = `<span class="text-success">Fetching citation for ${currentDoi}</span>.`;
 
                 let data = await fetch(url);
-                console.log(
+                console.info(
                     'Fetching from: ' + url + '. Click this to view the JSON response.',
                 );
 
@@ -176,20 +162,33 @@ import ACSCitation from '../components/ACSCitation.astro';
                     const volume = jsonData.message.volume;
                     const pages = jsonData.message.page;
                     const url = jsonData.message.URL.replace('dx.doi.org', 'doi.org');
+                    const id =
+                        'citation-' + jsonData.message.DOI.replaceAll(/\/|\./g, '-');
 
-                    const htmlCitation = `
-					<div class="article-citation-inner">
-						${authors} ${title}. <i>${journalAbbr ?? ''}</i> <b>${year}</b>${
-                            volume ? ', <i>' + volume + '</i>, ' : ''
-                        }${pages}. ${url}.
-					</div>`
+                    if (
+                        $citationsMap
+                            .get()
+                            .some((citation: HTMLElement) => citation.id == url)
+                    ) {
+                        statusDiv.innerHTML = `<span class="text-error">Citation for ${currentDoi} already exists.</span>`;
+                        continue;
+                    }
+
+                    const volumeAndPages = volume
+                        ? ', <i>' + volume + (pages ? `</i>, ${pages}` : '</i>')
+                        : '';
+
+                    const htmlCitation = `<div>${authors} ${title}. <i>${
+                        journalAbbr ?? ''
+                    }</i> <b>${year}</b>${volumeAndPages}. ${url}.</div>`
                         .toString()
                         .replace('undefined', '');
 
                     const citationElement = htmlToElement(htmlCitation);
+                    citationElement.id = id;
 
-                    document.getElementById('output')!.append(citationElement);
                     $citationsMap.set([...$citationsMap.get(), citationElement]);
+                    window.dispatchEvent(new Event('storage'));
 
                     (document.getElementById('doi-input') as HTMLInputElement).value = '';
                     statusDiv.innerHTML = `<span class="text-blue-400">Done.</span>`;
@@ -199,6 +198,8 @@ import ACSCitation from '../components/ACSCitation.astro';
     </script>
 
     <script>
+        // Clipboard Logic
+
         import TurndownService from 'turndown';
         const turndownService = new TurndownService({
             headingStyle: 'atx',
@@ -223,10 +224,55 @@ import ACSCitation from '../components/ACSCitation.astro';
             copyToClipboard(output ?? '', 'markdown');
         });
 
-        document.getElementById('copy-html')?.addEventListener('click', () => {
-            const output = document.getElementById('output')?.innerHTML;
-            copyToClipboard(output ?? '', 'html');
+        // TODO: RE-ENABLE THIS
+        // document.getElementById('copy-html')?.addEventListener('click', () => {
+        //     const output = document.getElementById('output')?.innerHTML;
+        //     copyToClipboard(output ?? '', 'html');
+        // });
+
+        // window.addEventListener('citation-field-mounted', () => {
+        //     findCopyButtons();
+        // });
+        window.addEventListener('citation-field-updated', () => {
+            findCopyButtons();
         });
+        function findCopyButtons() {
+            document.querySelectorAll('.copy-button').forEach(el => {
+                el.addEventListener('click', () => {
+                    const data = (el as HTMLElement).dataset;
+                    copyCitation(data.for as string, data.method as FormatStyle);
+                });
+            });
+        }
+
+        type FormatStyle = 'text' | 'html' | 'markdown';
+
+        function copyCitation(id: string, format: FormatStyle) {
+            const citation = document.querySelector(
+                `#${id} .citation-inner`,
+            ) as HTMLElement;
+
+            let textToCopy: string = '';
+            switch (format) {
+                case 'text':
+                    textToCopy = citation.innerText;
+                    break;
+                case 'markdown':
+                    textToCopy = turndownService.turndown(
+                        citation as TurndownService.Node,
+                    );
+                    break;
+            }
+
+            navigator.clipboard.writeText(textToCopy).then(
+                function () {
+                    console.log(`Copying ${id} to clipboard was successful!`);
+                },
+                function (err) {
+                    console.error('Async: Could not copy text: ', err);
+                },
+            );
+        }
 
         function copyToClipboard(text: string, format: string) {
             // Copy the content of the output div to the clipboard
@@ -244,12 +290,38 @@ import ACSCitation from '../components/ACSCitation.astro';
     </script>
 
     <script>
+        // Handle Deletes
         import { $citationsMap } from '../atoms/citationsMap.ts';
+
+        // Delete All Data
         document.getElementById('delete-data')?.addEventListener('click', () => {
-            console.log($citationsMap.get());
             $citationsMap.set([]);
-            console.log($citationsMap.get());
-            document.getElementById('output')!.innerHTML = '';
+            window.dispatchEvent(new Event('storage'));
         });
+
+        // Delete Single Citation
+        function findDeleteButtons() {
+            document.querySelectorAll('.delete-button').forEach(el => {
+                // console.log(el);
+                el.addEventListener('click', () => {
+                    const data = (el as HTMLElement).dataset;
+                    deleteCitation(data.for as string);
+                });
+            });
+        }
+        window.addEventListener('citation-field-updated', () => {
+            findDeleteButtons();
+        });
+
+        function deleteCitation(id: string) {
+            const citationsMap = $citationsMap.get();
+            const index = citationsMap.findIndex(citation => citation.id == id);
+            if (index > -1) {
+                citationsMap.splice(index, 1);
+            }
+
+            $citationsMap.set(citationsMap);
+            window.dispatchEvent(new Event('storage'));
+        }
     </script>
 </html>
