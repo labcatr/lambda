@@ -23,7 +23,7 @@ Citations will persist on page reload, so don't worry about losing your citation
 
 ## Extra
 
-Special thanks to Anastasia for giving me the idea.  
+Dedicated to Anastasia. Thank you for giving me the idea and giving me your endless support.  
 Created by Trevor Fox (October, 2023).
 
 ## Tech Stack
